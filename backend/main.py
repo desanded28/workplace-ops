@@ -44,7 +44,7 @@ def list_tasks(
     tool: Optional[str] = None,
 ):
     db = get_db()
-    query = "SELECT * FROM tasks WHERE 1=1"
+    query = "SELECT * FROM tasks WHERE 1=1"  # 1=1 so we can always append AND clauses
     params = []
     if status:
         query += " AND status = ?"
@@ -58,6 +58,7 @@ def list_tasks(
     if tool:
         query += " AND tool = ?"
         params.append(tool)
+    # sort critical stuff to the top, then most recent first within each priority
     query += " ORDER BY CASE priority WHEN 'critical' THEN 0 WHEN 'high' THEN 1 WHEN 'medium' THEN 2 WHEN 'low' THEN 3 END, created_at DESC"
     rows = db.execute(query, params).fetchall()
     db.close()
@@ -89,6 +90,7 @@ def update_task(task_id: int, update: TaskUpdate):
     fields = []
     params = []
     for field, value in update.model_dump(exclude_none=True).items():
+        # pydantic enums have a .value attr — unwrap so we store the string not the enum
         if hasattr(value, "value"):
             value = value.value
         fields.append(f"{field} = ?")
@@ -133,7 +135,7 @@ def task_stats():
     today = datetime.utcnow().strftime("%Y-%m-%d")
     overdue = sum(1 for t in tasks if t["due_date"] and t["due_date"] < today and t["status"] != "done")
 
-    # Avg completion time for done tasks
+    # rough avg completion time — uses updated_at as a proxy for "done date"
     completion_days = []
     for t in tasks:
         if t["status"] == "done" and t["created_at"] and t["updated_at"]:
@@ -230,7 +232,7 @@ def list_integrations():
 
 @app.post("/api/integrations/{tool}/test")
 async def test_integration(tool: str):
-    await asyncio.sleep(0.5)
+    await asyncio.sleep(0.5)  # fake latency so the UI loading state actually shows up
     db = get_db()
     row = db.execute("SELECT * FROM integrations WHERE tool = ?", (tool,)).fetchone()
     db.close()

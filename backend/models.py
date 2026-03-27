@@ -26,7 +26,7 @@ class Tool(str, Enum):
 class TaskCreate(BaseModel):
     title: str
     description: Optional[str] = None
-    status: TaskStatus = TaskStatus.backlog
+    status: TaskStatus = TaskStatus.backlog  # new tasks land in backlog by default
     assignee: Optional[str] = None
     department: str
     priority: Priority = Priority.medium
@@ -35,6 +35,7 @@ class TaskCreate(BaseModel):
     tool: Tool
 
 
+# all fields optional so you can PATCH just the ones you want to change
 class TaskUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
